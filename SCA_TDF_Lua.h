@@ -25,17 +25,16 @@
 
 using namespace sca_tdf;
 
-#if 0
+
 template<class T, int N> SCA_TDF_MODULE ( Source_Lua )
 {
     sca_tdf::sca_out<T>  out[N];  // output
   private:
     lua_State* L;
-
+    std::string script;
     int    rate;
     double tstep;
     sc_core::sc_time_unit unit;
-
 
     void initialize ()
     {
@@ -46,7 +45,13 @@ template<class T, int N> SCA_TDF_MODULE ( Source_Lua )
 
     void set_attributes ()
     {
-
+      // set data rate of output ports
+      for (int i = 0; i < N; i++)
+      {
+    	/* the first argument */
+        out[i].set_rate( rate );
+        out[i].set_timestep( tstep, unit ); //8 kGz (125 uS)
+      }
     }
 
     void processing ()
@@ -54,15 +59,13 @@ template<class T, int N> SCA_TDF_MODULE ( Source_Lua )
   	  /* the function name */
   	  lua_getglobal(L, "processing");
 
-
-
   	  /* call the function with N arguments, return 0 result */
   	  lua_call(L, 0, N);
 
       for (int i = 0; i < N; i++)
       {
     	/* the first argument */
-      	out[N] = lua_tonumber(L, -1);
+      	out[i] = lua_tonumber(L, (i + 1));
       }
 
     }
@@ -70,15 +73,14 @@ template<class T, int N> SCA_TDF_MODULE ( Source_Lua )
   public:
     Source_Lua ( sc_core::sc_module_name n, std::string script, int rate = 1, double tstep = 0.01, sc_core::sc_time_unit unit = SC_US )
     {
-    	this->rate = rate;
-    	this->tstep = tstep;
-        this->unit = unit;
-
-    	//out.set_rate( rate );
+      this->script = script;
+      this->rate = rate;
+      this->tstep = tstep;
+      this->unit = unit;
 
       L = luaL_newstate();
       luaL_openlibs(L);
-      luaL_dofile(L, script.c_str());
+      luaL_dofile(L, this->script.c_str());
       lua_pcall(L, 0, 0, 0);
     }
 
@@ -89,8 +91,6 @@ template<class T, int N> SCA_TDF_MODULE ( Source_Lua )
   	  lua_close(L);
     }
 };
-#endif
-
 
 
 template<class T, int N> SCA_TDF_MODULE ( Sink_Lua )
@@ -149,60 +149,6 @@ template<class T, int N> SCA_TDF_MODULE ( Sink_Lua )
 
 
 
-
-#if 0
-template<class T, int N> SCA_TDF_MODULE ( Source_Lua )
-{
-    sca_tdf::sca_out<T>  out[N];  // output
-  private:
-    lua_State* L;
-
-    void initialize ()
-    {
-      /* the function name */
-      lua_getglobal(L, "initialize");
-  	  lua_call(L, 0, 0);
-    }
-
-    void set_attributes ()
-    {
-
-    }
-
-    void processing ()
-    {
-  	  /* the function name */
-  	  lua_getglobal(L, "processing");
-
-
-
-  	  /* call the function with N arguments, return 0 result */
-  	  lua_call(L, 0, N);
-
-      for (int i = 0; i < N; i++)
-      {
-    	/* the first argument */
-      	out[N] = lua_tonumber(L, -1);
-      }
-
-    }
-
-  public:
-    Source_Lua ( sc_core::sc_module_name n, char *script )
-    {
-      L = luaL_newstate();
-      luaL_openlibs(L);
-      luaL_dofile(L, script);
-      lua_pcall(L, 0, 0, 0);
-    }
-
-    ~Source_Lua ()
-    {
-      lua_getglobal(L, "destructor");
-    }
-};
-
-#endif
 
 
 #if 0
