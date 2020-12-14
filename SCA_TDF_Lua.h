@@ -65,9 +65,8 @@ template<class T, int N> SCA_TDF_MODULE ( Source_Lua )
       for (int i = 0; i < N; i++)
       {
     	/* the first argument */
-      	out[i] = lua_tonumber(L, (i + 1));
+    	out[i] = lua_tonumber(L, -(N - i));
       }
-
     }
 
   public:
