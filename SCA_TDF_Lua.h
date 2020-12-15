@@ -1,5 +1,5 @@
 /*
- * This file is part of the XXX distribution (https://github.com/yrasik/SystemC_AMS_Lua).
+ * This file is part of the "SystemC AMS Lua" distribution (https://github.com/yrasik/SystemC_AMS_Lua).
  * Copyright (c) 2020 Yuri Stepanenko.
  *
  * This program is free software: you can redistribute it and/or modify
@@ -40,7 +40,7 @@ template<class T, int N> SCA_TDF_MODULE ( Source_Lua )
     {
       /* the function name */
       lua_getglobal(L, "initialize");
-  	  lua_call(L, 0, 0);
+      lua_pcall(L, 0, 0, 0);
     }
 
     void set_attributes ()
@@ -48,7 +48,7 @@ template<class T, int N> SCA_TDF_MODULE ( Source_Lua )
       // set data rate of output ports
       for (int i = 0; i < N; i++)
       {
-    	/* the first argument */
+       /* the first argument */
         out[i].set_rate( rate );
         out[i].set_timestep( tstep, unit ); //8 kGz (125 uS)
       }
@@ -56,16 +56,17 @@ template<class T, int N> SCA_TDF_MODULE ( Source_Lua )
 
     void processing ()
     {
-  	  /* the function name */
-  	  lua_getglobal(L, "processing");
+      /* the function name */
+      lua_getglobal(L, "processing");
 
-  	  /* call the function with N arguments, return 0 result */
-  	  lua_call(L, 0, N);
+      /* call the function with N arguments, return 0 result */
+      lua_pcall(L, 0, N, 0);
 
       for (int i = 0; i < N; i++)
       {
-    	/* the first argument */
-    	out[i] = lua_tonumber(L, -(N - i));
+        /* the first argument */
+        out[i] = lua_tonumber(L, -(i - 1));
+        lua_pop(L, 1);
       }
     }
 
@@ -86,8 +87,8 @@ template<class T, int N> SCA_TDF_MODULE ( Source_Lua )
     ~Source_Lua ()
     {
       lua_getglobal(L, "destructor");
-  	  lua_call(L, 0, 0);
-  	  lua_close(L);
+      lua_pcall(L, 0, 0, 0);
+      lua_close(L);
     }
 };
 
@@ -103,7 +104,7 @@ template<class T, int N> SCA_TDF_MODULE ( Sink_Lua )
     {
       /* the function name */
       lua_getglobal(L, "initialize");
-  	  lua_call(L, 0, 0);
+      lua_pcall(L, 0, 0, 0);
     }
 
     void set_attributes ()
@@ -113,60 +114,52 @@ template<class T, int N> SCA_TDF_MODULE ( Sink_Lua )
 
     void processing ()
     {
-  	  /* the function name */
-  	  lua_getglobal(L, "processing");
-
+      /* the function name */
+      lua_getglobal(L, "processing");
       lua_pushnumber(L, in[0].get_time().to_seconds());
 
       for (int i = 0; i < N; i++)
       {
-    	/* the first argument */
-      	lua_pushnumber(L, in[i].read());
+        /* the first argument */
+        lua_pushnumber(L, in[i].read());
       }
 
-  	  /* call the function with N arguments, return 0 result */
-  	  lua_call(L, (N + 1), 0);
+      /* call the function with N+1 arguments, return 0 result */
+      lua_pcall(L, (N + 1), 0, 0);
     }
 
   public:
     Sink_Lua ( sc_core::sc_module_name n, std::string script )
     {
+      this->script = script;
       L = luaL_newstate();
       luaL_openlibs(L);
-      luaL_dofile(L, script.c_str());
+      luaL_dofile(L, this->script.c_str());
       lua_pcall(L, 0, 0, 0);
     }
 
     ~Sink_Lua ()
     {
       lua_getglobal(L, "destructor");
-  	  lua_call(L, 0, 0);
-  	  lua_close(L);
+      lua_pcall(L, 0, 0, 0);
+      lua_close(L);
     }
 };
 
 
-
-
-
-
-#if 0
-
-template<class T, int N> SCA_TDF_MODULE ( Lua )
+template<class T, int N, int M> SCA_TDF_MODULE ( Converter_Lua )
 {
     sca_tdf::sca_in<T>  in[N];  // input
-   // sca_tdf::sca_out<T> out[M]; // output
+    sca_tdf::sca_out<T> out[M]; // output
   private:
     lua_State* L;
-
+    std::string script;
 
     void initialize ()
     {
       /* the function name */
       lua_getglobal(L, "initialize");
-
-  	  lua_call(L, 0, 0);
-
+      lua_pcall(L, 0, 0, 0);
     }
 
     void set_attributes ()
@@ -176,34 +169,43 @@ template<class T, int N> SCA_TDF_MODULE ( Lua )
 
     void processing ()
     {
-      double in_0 = in[0].read();
+      lua_getglobal(L, "processing");
 
-  	  /* the function name */
-  	  lua_getglobal(L, "processing");
+      for (int i = 0; i < N; i++)
+      {
+        /* the first argument */
+        lua_pushnumber(L, in[i].read());
+      }
 
-  	  /* the first argument */
-  	  lua_pushnumber(L, in_0);
+     /* call the function with N arguments, return M result */
+     lua_pcall(L, N, M, 0);
 
-  	  /* call the function with 2 arguments, return 1 result */
-  	  //lua_call(L, 2, 1);
-  	  lua_call(L, 1, 0);
 
-  	  /* get the result */
-  	  //sum = (int)lua_tointeger(L, -1);
-  	  //lua_pop(L, 1);
-
+     for (int i = 0; i < M; i++)
+     {
+        /* the first argument */
+        out[i] = lua_tonumber(L, -(i - 1));
+        lua_pop(L, 1);
+     }
     }
-    
+
   public:
-    Lua ( sc_core::sc_module_name n, char *script )
+    Converter_Lua ( sc_core::sc_module_name n, std::string script )
     {
+      this->script = script;
       L = luaL_newstate();
       luaL_openlibs(L);
-      luaL_dofile(L, script);
+      luaL_dofile(L, this->script.c_str());
       lua_pcall(L, 0, 0, 0);
     }
+
+    ~Converter_Lua ()
+    {
+      lua_getglobal(L, "destructor");
+      lua_pcall(L, 0, 0, 0);
+      lua_close(L);
+    }
 };
-#endif
 
 
 
