@@ -208,5 +208,27 @@ template<class T, int N, int M> SCA_TDF_MODULE ( Converter_Lua )
 };
 
 
+template<class T, class N, int M> SCA_TDF_MODULE ( sca_tdf_onverter )
+{
+    sca_tdf::sca_in<T>  in[M];  // input
+    sca_tdf::sca_out<N> out[M]; // output
+  private:
+    void processing ()
+    {
+      for (int i = 0; i < M; i++)
+      {
+        T din = in[i].read();
+        N dout = (N)(din);
+        out[i].write(dout);
+      }
+    }
+
+  public:
+    sca_tdf_onverter( sc_core::sc_module_name n)
+    {
+
+    }
+};
+
 
 #endif /* SCA_TDF_Lua_H_ */
