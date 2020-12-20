@@ -231,4 +231,62 @@ template<class T, class N, int M> SCA_TDF_MODULE ( sca_tdf_onverter )
 };
 
 
+template<int N> class plot_simple
+{
+  public:
+	double axis_x;
+	double axis_y[N];
+  private:
+    lua_State* L;
+    std::string script;
+
+  public:
+    void initialize ()
+    {
+      /* the function name */
+      lua_getglobal(L, "initialize");
+      lua_pcall(L, 0, 0, 0);
+    }
+
+    void put_point()
+    {
+      /* the function name */
+      lua_getglobal(L, "processing");
+      lua_pushnumber(L, axis_x);
+
+      for (int i = 0; i < N; i++)
+      {
+        /* the first argument */
+        lua_pushnumber(L, axis_y[i]);
+      }
+
+      /* call the function with (N + 1) arguments, return 0 result */
+      lua_pcall(L, (N + 1), 0, 0);
+    }
+
+
+    plot_simple (std::string script )
+    {
+      this->script = script;
+      axis_x = 0;
+      for (int i = 0; i < N; i++)
+      {
+        axis_y[i] = 0;
+      }
+
+      L = luaL_newstate();
+      luaL_openlibs(L);
+      luaL_dofile(L, this->script.c_str());
+      lua_pcall(L, 0, 0, 0);
+    }
+
+    ~plot_simple ()
+    {
+      lua_getglobal(L, "destructor");
+      lua_pcall(L, 0, 0, 0);
+      lua_close(L);
+    }
+};
+
+
 #endif /* SCA_TDF_Lua_H_ */
